@@ -6,7 +6,7 @@ from parler.admin import TranslatableAdmin
 
 from users.models import OidcClientOptions
 
-from .models import Api, ApiDomain, ApiScope, ApiScopeTranslation
+from .models import Api, ApiDomain, ApiScope, ApiScopeTranslation, AutoConsentScope
 
 
 class DontRequireIdentifier(object):
@@ -72,10 +72,15 @@ class OidcClientOptionsInlineAdmin(admin.StackedInline):
     model = OidcClientOptions
 
 
+class AutoConsentScopeInline(admin.TabularInline):
+    model = AutoConsentScope
+    extra = 0
+
+
 admin_site.unregister(oidc_provider.models.Client)
 
 
 @admin.register(oidc_provider.models.Client)
 class ClientAdmin(oidc_provider.admin.ClientAdmin):
     form = OidcClientForm
-    inlines = [OidcClientOptionsInlineAdmin]
+    inlines = [OidcClientOptionsInlineAdmin, AutoConsentScopeInline]

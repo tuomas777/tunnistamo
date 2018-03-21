@@ -185,3 +185,18 @@ class ApiScopeTranslation(TranslatedFieldsModel):
 
     def __str__(self):
         return "{obj}[{lang}]".format(obj=self.master, lang=self.language_code)
+
+
+class AutoConsentScope(models.Model):
+    scope = models.CharField(max_length=200)
+    client = models.ForeignKey(
+        Client, verbose_name=_('client'), related_name='auto_consent_scopes', on_delete=models.CASCADE
+    )
+
+    class Meta:
+        unique_together = ('scope', 'client')
+        verbose_name = _('Auto consent scope')
+        verbose_name_plural = _('Auto consent scopes')
+
+    def __str__(self):
+        return '{} {}'.format(self.scope, self.client)
