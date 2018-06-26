@@ -2,8 +2,10 @@ from __future__ import unicode_literals
 
 import uuid
 
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.encoding import python_2_unicode_compatible
+from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
 from helusers.models import AbstractUser
 from oauth2_provider.models import AbstractApplication
@@ -73,3 +75,53 @@ class OidcClientOptions(OptionsBase):
     class Meta:
         verbose_name = _("OIDC Client Options")
         verbose_name_plural = _("OIDC Client Options")
+
+
+class UserLoginEntryManager(models.Manager):
+    def create_from_request(self, request, **kwargs):
+        kwargs.setdefault('user', request.user)
+        kwargs.setdefault('timestamp', now())
+        return self.create(**kwargs)
+
+
+class UserLoginEntry(models.Model):
+    user = models.ForeignKey(User, verbose_name=_('user'), related_name='login_entries', on_delete=models.CASCADE)
+    timestamp = models.DateTimeField(verbose_name=_('timestamp'))
+
+    target_app = models.ForeignKey(
+        Application, verbose_name='target app', related_name='user_login_entries_as_target', null=True, blank=True,
+        on_delete=models.PROTECT
+    )
+    requesting_app = models.ForeignKey(
+        Application, verbose_name='requesting app', related_name='user_login_entries_as_requester', null=True,
+        blank=True, on_delete=models.PROTECT
+    )
+
+    target_client = models.ForeignKey(
+        Client, verbose_name='target client', related_name='user_login_entries_as_target', null=True, blank=True,
+        on_delete=models.PROTECT
+    )
+    requesting_client = models.ForeignKey(
+        Client, verbose_name='requesting client', related_name='user_login_entries_as_requester', null=True,
+        blank=True, on_delete=models.PROTECT
+    )
+
+    ip_address = models.CharField(verbose_name=_('IP address'), max_length=50)
+    geo_location = models.CharField(verbose_name=_('geo location'), max_length=100, null=True, blank=True)
+
+    objects = UserLoginEntryManager()
+
+    class Meta:
+        verbose_name = _('user login entry')
+        verbose_name_plural = _('user login entries')
+        ordering = ('id',)
+
+    def clean(self):
+        if (self.target_app or self.requesting_app) and (self.target_client or self.requesting_client):
+            raise ValidationError('Cannot set both apps and clients.')
+        if not (self.target_app and self.requesting_app) and not (self.target_client and self.requesting_client):
+            raise ValidationError('Either apps or clients must be set.')
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
