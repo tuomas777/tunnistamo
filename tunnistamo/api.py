@@ -9,6 +9,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
 from hkijwt.models import AppToAppPermission
+from users.models import UserLoginEntry
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +96,12 @@ class GetJWTView(views.APIView):
         payload['aud'] = target_app.client_id
         payload['exp'] = request.auth.expires
         encoded = jwt.encode(payload, secret, algorithm='HS256')
+
+        UserLoginEntry.objects.create_from_request(
+            request,
+            target_app=target_app,
+            requesting_app=requester_app,
+        )
 
         ret = dict(token=encoded, expires_at=request.auth.expires)
         return Response(ret)
