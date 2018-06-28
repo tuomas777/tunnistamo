@@ -1,4 +1,5 @@
 import factory
+from oidc_provider.models import Client
 
 from .models import Api, ApiDomain, ApiScope
 
@@ -33,3 +34,15 @@ class ApiScopeFactory(factory.django.DjangoModelFactory):
         obj.full_clean()
         obj.save()
         return obj
+
+
+class ClientFactory(factory.django.DjangoModelFactory):
+    name = factory.Sequence(lambda n: 'test_client_{}'.format(n))
+    client_id = factory.Faker('uuid4')
+    client_secret = factory.Faker('ean13')
+    response_type = 'code'
+    redirect_uris = ['http://example.com/']
+    require_consent = True
+
+    class Meta:
+        model = Client

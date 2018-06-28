@@ -1,6 +1,7 @@
 import factory
 from django.utils.timezone import now
 
+from oidc_apis.factories import ClientFactory
 from tunnistamo.factories import UserFactory
 from users.models import Application, UserLoginEntry
 
@@ -20,6 +21,8 @@ class UserLoginEntryFactory(factory.django.DjangoModelFactory):
     user = factory.SubFactory(UserFactory)
     timestamp = factory.LazyFunction(now)
     ip_address = factory.Faker('ipv4')
+    target_client = factory.SubFactory(ClientFactory)
+    requesting_client = factory.SubFactory(ClientFactory)
 
     class Meta:
         model = UserLoginEntry

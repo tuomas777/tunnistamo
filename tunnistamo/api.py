@@ -4,8 +4,9 @@ import jwt
 from django.contrib.auth import get_user_model
 from oauth2_provider.contrib.rest_framework import TokenHasReadWriteScope
 from oauth2_provider.models import get_application_model
-from rest_framework import generics, mixins, permissions, serializers, views
+from rest_framework import generics, mixins, permissions, serializers, views, viewsets
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 
 from hkijwt.models import AppToAppPermission
@@ -105,3 +106,29 @@ class GetJWTView(views.APIView):
 
         ret = dict(token=encoded, expires_at=request.auth.expires)
         return Response(ret)
+
+
+class UserLoginEntrySerializer(serializers.ModelSerializer):
+    target = serializers.SerializerMethodField()
+
+    class Meta:
+        model = UserLoginEntry
+        fields = ('timestamp', 'target', 'ip_address', 'geo_location')
+
+    def get_target(self, obj):
+        assert bool(obj.target_client) ^ bool(obj.target_app)
+        return obj.target_client.name if obj.target_client else obj.target_app.name
+
+
+class UserLoginEntryPagination(LimitOffsetPagination):
+    default_limit = 10000
+
+
+class UserLoginEntryView(mixins.ListModelMixin, viewsets.GenericViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = UserLoginEntrySerializer
+    queryset = UserLoginEntry.objects.all()
+    pagination_class = UserLoginEntryPagination
+
+    def get_queryset(self):
+        return self.queryset.filter(user_id=self.request.user.id)

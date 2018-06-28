@@ -1,8 +1,8 @@
 import pytest
 from django.core.exceptions import ValidationError
 from django.utils.crypto import get_random_string
-from oidc_provider.tests.app.utils import create_fake_client
 
+from oidc_apis.factories import ClientFactory
 from users.factories import ApplicationFactory, UserLoginEntryFactory
 from users.models import User
 
@@ -31,19 +31,18 @@ def test_user_primary_sid(user_factory):
 @pytest.mark.django_db
 def test_user_login_entry_constraints(fields, expected_error):
     app1, app2 = ApplicationFactory.create_batch(2)
-    client1 = create_fake_client('code')
-    client2 = create_fake_client('code')
-    all_attrs = {
+    client1, client2 = ClientFactory.create_batch(2)
+    all_args = {
         'target_app': app1,
         'requesting_app': app2,
         'target_client': client1,
         'requesting_client': client2,
     }
-    attrs = {k: v for k, v in all_attrs.items() if k in fields}
+    args = {k: v if k in fields else None for k, v in all_args.items()}  # set value None if arg not in fields
 
     if expected_error:
         with pytest.raises(ValidationError) as e:
-            UserLoginEntryFactory(**attrs)
+            UserLoginEntryFactory(**args)
         assert expected_error in str(e)
     else:
-        UserLoginEntryFactory(**attrs)
+        UserLoginEntryFactory(**args)
