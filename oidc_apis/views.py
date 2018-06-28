@@ -14,7 +14,7 @@ def get_api_tokens_view(request, token, *args, **kwargs):
     :type token: oidc_provider.models.Token
     :rtype: JsonResponse
     """
-    api_tokens = get_api_tokens_by_access_token(token, request=request)
+    api_tokens = get_api_tokens_by_access_token(token, request=request, generate_login_entries=True)
     response = JsonResponse(api_tokens, status=200)
     response['Access-Control-Allow-Origin'] = '*'
     response['Cache-Control'] = 'no-store'

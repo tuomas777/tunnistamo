@@ -1,13 +1,16 @@
 import datetime
 from collections import defaultdict
 
+import pytz
 from django.utils import timezone
 from oidc_provider.lib.utils.token import create_id_token, encode_id_token
+
+from users.models import UserLoginEntry
 
 from .models import ApiScope
 
 
-def get_api_tokens_by_access_token(token, request=None):
+def get_api_tokens_by_access_token(token, request=None, generate_login_entries=False):
     """
     Get API Tokens for given Access Token.
 
@@ -16,6 +19,9 @@ def get_api_tokens_by_access_token(token, request=None):
 
     :type request: django.http.HttpRequest|None
     :param request: Optional request object for resolving issuer URLs
+
+    :type generate_login_entries: bool
+    :param generate_login_entries: Whether UserLoginEntry objects matching the api tokens will be generated
 
     :rtype: dict[str,str]
     :return: Dictionary of the API tokens with API identifer as the key
@@ -30,12 +36,12 @@ def get_api_tokens_by_access_token(token, request=None):
         scopes_by_api[api_scope.api.identifier].append(api_scope)
 
     return {
-        api_identifier: generate_api_token(scopes, token, request)
+        api_identifier: generate_api_token(scopes, token, request, generate_login_entries)
         for (api_identifier, scopes) in scopes_by_api.items()
     }
 
 
-def generate_api_token(api_scopes, token, request=None):
+def generate_api_token(api_scopes, token, request=None, generate_login_entry=False):
     assert api_scopes
     api = api_scopes[0].api
     audience = api.oidc_client.client_id
@@ -48,6 +54,15 @@ def generate_api_token(api_scopes, token, request=None):
     payload.update(id_token)
     payload.update(_get_api_authorization_claims(api_scopes))
     payload['exp'] = _get_api_token_expires_at(token)
+
+    if generate_login_entry:
+        assert request
+        UserLoginEntry.objects.create_from_request(
+            request,
+            timestamp=datetime.datetime.fromtimestamp(payload['iat'], tz=pytz.utc),
+            target_client=api.oidc_client,
+            requesting_client=token.client,
+        )
 
     return encode_id_token(payload, api.oidc_client)
 
