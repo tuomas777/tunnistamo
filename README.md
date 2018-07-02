@@ -122,5 +122,14 @@ for instance when deploying Tunnistamo behind a reverse proxy, use setting
 IPWARE_META_PRECEDENCE_ORDER = ('HTTP_X_FORWARDED_FOR',)
 ```
 
-## License
+### Getting geo location data for IP addresses
+
+In order to get geo location data for IP addresses, which is used for user login 
+history entries, you'll need GeoLite2 City dataset in  binary format (`GeoLite2-City.mmdb`)
+from [here](https://dev.maxmind.com/geoip/geoip2/geolite2/). Unzip it to somewhere,
+and add setting `GEOIP_PATH` pointing to that directory. Inside the repo
+`data` dir is the preferred place as that is in `.gitignore`. See
+[Django docs](https://docs.djangoproject.com/en/1.11/ref/contrib/gis/geoip2/) for more info.
+
+ ## License
 This project is licensed under the MIT License – see the [LICENSE](LICENSE) file for details.
